@@ -1,48 +1,54 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    _id : {
-        type:String,
+    _id: {
+        type: String,
         required: true
     },
-    email : {
-        type:String,
+    email: {
+        type: String,
         required: true
     },
-    full_name : {
-        type:String,
+    username: {                 
+        type: String,
         unique: true
     },
-    bio : {
-        type:String,
-        default: 'Hey there ! I am using Buzzly'
+    full_name: {
+        type: String
     },
-    bio : {
-        type:String,
-        default: '',
+    bio: {                     
+        type: String,
+        default: 'Hey there! I am using Buzzly'
     },
-    cover_photo : {
-        type:String,
-        default: '',
+    profile_picture: {          
+        type: String,
+        default: ''
     },
-    location : {
-        type:String,
-        default: '',
+    cover_photo: {
+        type: String,
+        default: ''
     },
-    followers : [{
-        type:String,
-        ref: 'User',
+    location: {
+        type: String,
+        default: ''
+    },
+    followers: [{
+        type: String,
+        ref: 'User'
     }],
-    following : [{
-        type:String,
-        ref: 'User',
+    following: [{
+        type: String,
+        ref: 'User'
     }],
-    connection : [{
-        type:String,
-        ref: 'User',
+    connections: [{
+        type: String,
+        ref: 'User'
     }],
-},{timeStamps : true, minimize : false})
+}, {
+    timestamps: true,         
+    minimize: false
+});
 
-const User = mongoose.model('User' , userSchema)
+const User = mongoose.model('User', userSchema);
 
-export default User
+export default User;
