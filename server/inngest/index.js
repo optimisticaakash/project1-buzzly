@@ -181,18 +181,39 @@ const sendNewConnectionRequestReminder = inngest.createFunction(
 
 //Inngest Function to delete Story after 24 hours
 const deleteStory = inngest.createFunction(
-    {id : 'story-delete'},
-    {event : 'app/story.delete'},
-    async ({event,step}) => {
-        const {storyId} = event.data;
-        const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000)
-        await step.sleepUntil('wait-for-24-hours' , in24Hours)
-        await step.run("delete-story" , async() => {
-            await Story.findByIdAndDelete(storyId)
-            return {message : "Story deleted"}
-        })
-    }
-)
+  { id: "story-delete" },
+  { event: "app/story.delete" },
+  async ({ event, step }) => {
+
+    const { storyId } = event.data;
+
+    const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await step.sleepUntil("wait-for-24-hours", in24Hours);
+
+    await step.run("delete-story", async () => {
+
+      const story = await Story.findById(storyId);
+
+      if (!story) {
+        return { message: "Story already deleted" };
+      }
+
+      // ✅ delete from ImageKit if media exists
+      if (story.media_fileId) {
+        try {
+          await imagekit.files.delete(story.media_fileId);
+        } catch (err) {
+          console.log("ImageKit delete error:", err.message);
+        }
+      }
+
+      await Story.findByIdAndDelete(storyId);
+
+      return { message: "Story auto deleted after 24h" };
+    });
+  }
+);
 
 const sendNotificationOfUnseenMessages = inngest.createFunction(
     {id:"send-unseen-messages-notification"},

@@ -1,19 +1,24 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Users, UserPlus , UserCheck , UserRoundPen , MessageSquare} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import {
-  dummyConnectionsData as connections,
-  dummyFollowersData as followers,
-  dummyFollowingData as following,
-  dummyPendingConnectionsData as pendingConnections
-} from '../assets/assets'
-
+import { useSelector , useDispatch } from 'react-redux'
+import { useAuth } from '@clerk/clerk-react'
+import { fetchConnections } from '../features/connections/connectionsSlice'
+import api from '../api/axios'
+import toast from 'react-hot-toast'
+import { rejectConnection } from '../features/connections/connectionsSlice'
+import { Trash2 } from "lucide-react";
 
 const Connection = () => {
 
 
   const [currentTab ,setCurrentTab] = useState('Followers')
+
   const navigate = useNavigate()
+  const {getToken} = useAuth()
+  const dispatch = useDispatch()
+
+  const {connections , pendingConnections , followers , following} = useSelector((state) => state.connections)
 
   const dataArray = [
     {label : 'Followers' , value : followers , icon : Users },
@@ -21,6 +26,57 @@ const Connection = () => {
     {label : 'Pending' , value : pendingConnections , icon : UserRoundPen},
     {label : 'Connections' , value : connections , icon : UserPlus},
   ]
+
+  const handleReject = async (connectionId) => {
+    const token = await getToken()
+    dispatch(rejectConnection({ token, connectionId }))
+  }
+
+  const acceptConnection = async (connectionId) => {
+  try {
+    const { data } = await api.post(
+      '/api/user/accept',
+      { connectionId },
+      {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`
+        }
+      }
+    );
+
+    if (data.success) {
+      toast.success(data.message);
+      dispatch(fetchConnections(await getToken()));
+    } else {
+      toast.error(data.message);
+    }
+
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
+
+  const handleUnfollow = async (userId) => {
+    try {
+      const { data } = await api.post('/api/user/unfollow' , {id : userId} , {
+        headers : { Authorization : `Bearer ${await getToken()}`}
+      })
+      if(data.success){
+        toast.success(data.message)
+        dispatch(fetchConnections(await getToken()))
+      }else{
+        toast(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  useEffect(()=>{
+    getToken().then((token)=>{
+      dispatch(fetchConnections(token))
+    })
+  },[])
 
   return (
     <div className='min-h-screen bg-slate-50' >
@@ -61,53 +117,128 @@ const Connection = () => {
         
         {/* Connections */}
         <div className='flex flex-wrap gap-6 mt-6'>
-          {dataArray.find((item)=> item.label === currentTab).value.map((user)=>(
-            <div key={user._id} className='w-full max-w-88 flex gap-5 p-6 bg-white shadow rounded-md'>
-              <img src={user.profile_picture} alt="" className='rounded-full w-12 h-12 shadow-md mx-auto' />
-              <div className='flex-1'>
-                <p className='font-medium text-slate-700'>{user.full_name}</p>
-                <p className=' text-slate-500'>@{user.username}</p>
-                <p className=' text-slate-500'>{user.bio.slice(0,30)}...</p>
-                <div className='flex max-sm:flex-col gap-2 mt-4'>
-                  {
-                    <button onClick={()=> navigate('/profile/${user._id}')} className='w-full p-2 text-sm rounded bg-gradient-to-r from-indigo-500 to-blue-600
-                    hover:from-indigo-600 hover:to-blue-700 active:scale-95 transition text-white 
-                    cursor-pointer'>
-                      View Profile
-                    </button>
-                  }
-                  {
-                    currentTab === 'Following' && (
-                      <button className='w-full p-2 text-sm rounded bg-slate-100 
-                      hover:bg-slate-200 text-black active:scale-95 transition 
-                      cursor-pointer'>
-                        Unfollow
-                      </button>
-                    )
-                  }
-                  {
-                    currentTab === 'Pending' && (
-                      <button className='w-full p-2 text-sm rounded bg-slate-100 
-                      hover:bg-slate-200 text-black active:scale-95 transition 
-                      cursor-pointer'>
-                        Accept
-                      </button>
-                    )
-                  }
-                  {
-                    currentTab === 'Connections' && (
-                      <button onClick={()=> navigate(`/messages/${user._id}`)} className='w-full p-2 text-sm rounded bg-slate-100 
-                      hover:bg-slate-200 text-slate-800 active:scale-95 transition
-                      cursor-pointer flex items-center justify-center gap-1'>
-                        <MessageSquare className='w-4 h-4' />
-                        Message
-                      </button>
-                    )
-                  }
-                </div>
-              </div>
-            </div>
-          ))}
+
+          {currentTab === "Pending"
+            ? pendingConnections?.map((connection) => {
+
+                const user =
+                  connection?.from_user_id?._id === undefined
+                    ? connection?.to_user_id
+                    : connection?.from_user_id
+
+                if (!user) return null
+
+                return (
+                  <div
+                    key={connection._id}
+                    className='w-full max-w-88 flex gap-5 p-6 bg-white shadow rounded-md'
+                  >
+                    <img
+                      src={user?.profile_picture || "/default-avatar.png"}
+                      alt=""
+                      className='rounded-full w-12 h-12 shadow-md mx-auto'
+                    />
+
+                    <div className='flex-1'>
+                      <p className='font-medium text-slate-700'>
+                        {user?.full_name || "Unknown User"}
+                      </p>
+
+                      <p className='text-slate-500'>
+                        @{user?.username || ""}
+                      </p>
+
+                      <p className='text-slate-500'>
+                        {user?.bio ? user.bio.slice(0, 30) + "..." : ""}
+                      </p>
+
+                      <div className='flex max-sm:flex-col gap-2 mt-4'>
+
+                        <button
+                          onClick={() => navigate(`/profile/${user?._id}`)}
+                          className='w-full p-2 text-sm rounded bg-gradient-to-r from-indigo-500 to-blue-600
+                            hover:from-indigo-600 hover:to-blue-700 text-white transition'>
+                          View Profile
+                        </button>
+
+                        <button
+                          onClick={() => acceptConnection(connection._id)}
+                          className='w-full p-1 text-sm rounded bg-slate-100 hover:bg-green-500 text-black 
+                          active:scale-95 transition cursor-pointer'>
+                          Accept
+                        </button>
+
+                        <button
+                          onClick={() => handleReject(connection._id)}
+                          className='w-8 h-8 p-2 rounded-full bg-slate-200 backdrop-blur hover:bg-red-400 transition transform hover:scale-110'>
+                          <Trash2 size={17} className="text-slate-600 hover:text-white transition" />
+                        </button>
+
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+
+            : dataArray
+                .find((item) => item.label === currentTab)
+                ?.value?.map((user) => (
+
+                  <div
+                    key={user._id}
+                    className='w-full max-w-88 flex gap-5 p-6 bg-white shadow rounded-md'
+                  >
+                    <img
+                      src={user?.profile_picture || "/default-avatar.png"}
+                      alt=""
+                      className='rounded-full w-12 h-12 shadow-md mx-auto'
+                    />
+
+                    <div className='flex-1'>
+                      <p className='font-medium text-slate-700'>
+                        {user?.full_name}
+                      </p>
+
+                      <p className='text-slate-500'>
+                        @{user?.username}
+                      </p>
+
+                      <p className='text-slate-500'>
+                        {user?.bio ? user.bio.slice(0, 30) + "..." : ""}
+                      </p>
+
+                      <div className='flex max-sm:flex-col gap-2 mt-4'>
+
+                        <button
+                          onClick={() => navigate(`/profile/${user?._id}`)}
+                          className='w-full p-2 text-sm rounded bg-gradient-to-r from-indigo-500 to-blue-600
+                          hover:from-indigo-600 hover:to-blue-700 text-white transition'>
+                          View Profile
+                        </button>
+
+                        {currentTab === 'Following' && (
+                          <button
+                            onClick={() => handleUnfollow(user._id)}
+                            className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 transition'>
+                            Unfollow
+                          </button>
+                        )}
+
+                        {currentTab === 'Connections' && (
+                          <button
+                            onClick={() => navigate(`/messages/${user._id}`)}
+                            className='w-full p-2 text-sm rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center gap-1'>
+                            <MessageSquare className='w-4 h-4' />
+                            Message
+                          </button>
+                        )}
+
+                      </div>
+                    </div>
+                  </div>
+                ))
+          }
+
         </div>
       </div>
     </div>

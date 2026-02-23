@@ -4,7 +4,18 @@ import Message from "../models/Message.js";
 
 // ================= SSE CONNECTION STORE =================
 const connections = {};
+const onlineUsers = {};
 
+const broadcastOnlineUsers = () => {
+  Object.values(connections).forEach((connection) => {
+    connection.write(
+      `data: ${JSON.stringify({
+        type: "online",
+        onlineUsers
+      })}\n\n`
+    );
+  });
+};
 
 // ================= SSE CONTROLLER =================
 export const sseController = (req, res) => {
@@ -12,25 +23,28 @@ export const sseController = (req, res) => {
 
   console.log("New client connected:", userId);
 
-  // Correct SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
 
-  // Save connection
+  // ⚠️ REMOVE THIS:
+  // res.setHeader("Access-Control-Allow-Origin", "*");
+
   connections[userId] = res;
+  onlineUsers[userId] = true;
 
-  // Initial event
-  res.write(`data: Connected to SSE stream\n\n`);
+  // Broadcast to all users
+  broadcastOnlineUsers();
 
-  // On client disconnect
   req.on("close", () => {
     delete connections[userId];
+    delete onlineUsers[userId];
+
     console.log("Client disconnected:", userId);
+
+    broadcastOnlineUsers();
   });
 };
-
 
 
 // ================= SEND MESSAGE =================
@@ -131,4 +145,9 @@ export const getUserRecentMessages = async (req, res) => {
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
+};
+
+
+export const getOnlineUsers = (req, res) => {
+  res.json({ success: true, onlineUsers });
 };

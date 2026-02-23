@@ -2,14 +2,22 @@ import React, { useState } from 'react'
 import { dummyUserData } from '../assets/assets'
 import { Image, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSelector } from 'react-redux'
+import { useAuth } from '@clerk/clerk-react'
+import api from '../api/axios'
+import { useNavigate } from 'react-router-dom'
 
 const CreatePost = () => {
 
+  const navigate = useNavigate()
   const [content, setContent] = useState('')
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const user = dummyUserData
+
+  const user = useSelector((state)=> state.user.value)
+
+  const { getToken} = useAuth()
 
   // 🔥 Handle Image Upload
   const handleImageChange = (e) => {
@@ -19,15 +27,46 @@ const CreatePost = () => {
   }
 
   // 🔥 Remove Single Image
-  const handleRemoveImage = (indexToRemove) => {
-    setImages((prev) =>
-      prev.filter((_, index) => index !== indexToRemove)
-    )
+ const handleSumbit = async () => {
+
+  if (!images.length && !content.trim()) {
+    throw new Error("Please add at least one image or text");
   }
 
-  const handleSumbit = async() =>{
+  setLoading(true);
 
+  const postType =
+    images.length && content
+      ? "text_with_image"
+      : images.length
+      ? "image"
+      : "text";
+
+  try {
+    const formData = new FormData();
+    formData.append("content", content);
+    formData.append("post_type", postType);
+
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
+
+    const { data } = await api.post("/api/post/add", formData, {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
+
+    if (!data.success) {
+      throw new Error(data.message);
+    }
+
+    navigate("/");
+
+  } catch (error) {
+    throw error;
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-slate-100 to-white'>
@@ -114,17 +153,18 @@ const CreatePost = () => {
             />
 
             <button
-
               disabled={loading}
-              onClick={()=> toast.promise(handleSumbit(),{
-                loading : 'uploading ...' ,
-                success: <p>Post  Addded</p>,
-                error :<p>Post Not Added</p>,
-              })}
-              className='text-sm bg-gradient-to-r from-indigo-500
+              onClick={() =>
+                toast.promise(handleSumbit(), {
+                  loading: "Uploading...",
+                  success: "Post Added",
+                  error: (err) => err.message,
+                })
+              }
+              className="text-sm bg-gradient-to-r from-indigo-500
               to-blue-600 hover:from-indigo-600 hover:to-blue-700
               active:scale-95 transition text-white font-medium px-8 py-2
-              rounded-md cursor-pointer'
+              rounded-md cursor-pointer"
             >
               Publish Post
             </button>

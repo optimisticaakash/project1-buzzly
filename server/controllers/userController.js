@@ -275,8 +275,10 @@ export const getUserConnections = async (req, res)=>{
         const followers = user.followers
         const following = user.following
 
-        const pendingConnections = (await Connection.find({to_user_id : userId,
-            status : 'pending'}).populate('from_user_id')).map(connection=> connection.from_user_id)
+        const pendingConnections = await Connection.find({
+          to_user_id: userId,
+          status: 'pending'
+        }).populate('from_user_id')
 
             res.json({success : true , connections , followers , following , pendingConnections})
    
@@ -291,17 +293,29 @@ export const getUserConnections = async (req, res)=>{
 export const acceptConnectionRequest = async (req, res) => {
   try {
     const { userId } = req.auth();
-    const { id } = req.body;
+    const { connectionId } = req.body;
 
-    const connection = await Connection.findOne({
-      from_user_id: id,
-      to_user_id: userId
-    });
+    if (!connectionId) {
+      return res.json({
+        success: false,
+        message: "Connection ID is required"
+      });
+    }
+
+    const connection = await Connection.findById(connectionId);
 
     if (!connection) {
       return res.json({
         success: false,
         message: "Connection not found"
+      });
+    }
+
+    // Check if logged in user is receiver
+    if (connection.to_user_id.toString() !== userId) {
+      return res.json({
+        success: false,
+        message: "Unauthorized action"
       });
     }
 
@@ -312,41 +326,31 @@ export const acceptConnectionRequest = async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    const toUser = await User.findById(id);
+    // Add both users to each other's connection list
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { connections: connection.from_user_id }
+    });
 
-    if (!user || !toUser) {
-      return res.json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    if (!user.connections.includes(id)) {
-      user.connections.push(id);
-    }
-
-    if (!toUser.connections.includes(userId)) {
-      toUser.connections.push(userId);
-    }
-
-    await user.save();
-    await toUser.save();
+    await User.findByIdAndUpdate(connection.from_user_id, {
+      $addToSet: { connections: userId }
+    });
 
     connection.status = "accepted";
     await connection.save();
 
-    res.json({
+    return res.json({
       success: true,
       message: "Connection accepted successfully"
     });
 
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    return res.json({
+      success: false,
+      message: error.message
+    });
   }
 };
-
 
 // Get User Profiles
 export const getUserProfiles = async (req, res) => {
@@ -366,3 +370,17 @@ export const getUserProfiles = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+
+//Deny the connection request
+export const rejectConnection = async (req, res) => {
+  try {
+    const { connectionId } = req.params
+
+    await Connection.findByIdAndDelete(connectionId)
+
+    res.json({ success: true, message: "Connection rejected" })
+  } catch (error) {
+    res.json({ success: false, message: error.message })
+  }
+}
