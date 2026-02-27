@@ -6,7 +6,7 @@ import {SignIn} from '@clerk/clerk-react'
 
 const Login = () => {
     return(
-        <div className='min-h-screen flex flex-col md:flex-row'>
+        <div className='relative min-h-screen flex flex-col md:flex-row overflow-hidden'>
             {/*Background Image */}
             <img src={assets.bgImage} alt='' className='absolute top-0 left-0 -z-1 w-full h-full object-cover'/>
 
@@ -20,13 +20,13 @@ const Login = () => {
                             <div>
                                 <div className='flex'>
                                     {Array(5).fill(0).map((_,i)=>(<Star key={i}
-                                    className='size-4 ,md:size-4.5 text-transparent
+                                    className='size-4 md:size-4.5 text-transparent
                                     fill-amber-500' />))}
                                 </div>
                                 <p>Used by 12k+ developers</p>
                             </div>
                     </div>
-                    <h1 className='text-3xl md:text-6xl md:pb-2 font-bold bg-gradient-to-r
+                    <h1 className='text-4xl md:text-6xl    md:pb-2 font-bold leading-[1.25] bg-gradient-to-r
                     from-indigo-950 to-indigo-800 bg-clip-text text-transparent'>More than just friends truly connect</h1>
                     <p className='text-xl md:text-3xl text-indigo-900 max-w-72 md:max-w-md' >connect with global community on buzzly</p>
                 </div>
