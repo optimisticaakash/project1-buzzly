@@ -9,8 +9,8 @@
 Buzzly is a modern full-stack social media web application where users can connect, share posts, create stories, follow people, and chat in real time.
 
 🔗 **Live Demo:** https://buzzly-jade.vercel.app  
-🔗 **GitHub Repo:** https://github.com/your-username/buzzly  
-
+🔗 **GitHub Repo:** [https://github.com/your-username/buzzly  
+](https://github.com/optimisticaakash/project1-buzzly)
 ---
 
 ## 📌 Features
