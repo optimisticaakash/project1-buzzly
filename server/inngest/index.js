@@ -4,6 +4,7 @@ import Connection from "../models/Connection.js";
 import sendEmail from "../configs/nodeMailer.js";
 import Story from "../models/Story.js";
 import Message from "../models/Message.js";
+import imagekit from "../configs/imageKit.js";
 
 
 
@@ -187,9 +188,8 @@ const deleteStory = inngest.createFunction(
 
     const { storyId } = event.data;
 
-    const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await step.sleepUntil("wait-for-24-hours", in24Hours);
+    // ✅ wait exactly 24 hours
+    await step.sleep("24h");
 
     await step.run("delete-story", async () => {
 
@@ -199,7 +199,6 @@ const deleteStory = inngest.createFunction(
         return { message: "Story already deleted" };
       }
 
-      // ✅ delete from ImageKit if media exists
       if (story.media_fileId) {
         try {
           await imagekit.files.delete(story.media_fileId);
