@@ -188,28 +188,30 @@ const deleteStory = inngest.createFunction(
 
     const { storyId } = event.data;
 
-    // ✅ wait exactly 24 hours
-    await step.sleep("24h");
+    const story = await Story.findById(storyId);
+    if (!story) return;
+
+    // ⏳ Expiry = createdAt + 24 hours
+    const expiresAt = new Date(
+      story.createdAt.getTime() + 24 * 60 * 60 * 1000
+    );
+
+    await step.sleepUntil("wait-for-24-hours", expiresAt);
 
     await step.run("delete-story", async () => {
 
-      const story = await Story.findById(storyId);
+      const existingStory = await Story.findById(storyId);
+      if (!existingStory) return;
 
-      if (!story) {
-        return { message: "Story already deleted" };
-      }
-
-      if (story.media_fileId) {
+      if (existingStory.media_fileId) {
         try {
-          await imagekit.files.delete(story.media_fileId);
+          await imagekit.files.delete(existingStory.media_fileId);
         } catch (err) {
           console.log("ImageKit delete error:", err.message);
         }
       }
 
       await Story.findByIdAndDelete(storyId);
-
-      return { message: "Story auto deleted after 24h" };
     });
   }
 );
