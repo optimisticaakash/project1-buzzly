@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 const ChatBox = () => {
 
   const { messages } = useSelector((state) => state.messages)
-  const onlineUsers = useSelector((state) => state.online)   // ✅ FIXED HERE
+  const onlineUsers = useSelector((state) => state.online)
 
   const { userId } = useParams()
   const { getToken } = useAuth()
@@ -19,9 +19,12 @@ const ChatBox = () => {
   const [text, setText] = useState('')
   const [image, setImage] = useState(null)
   const [user, setUser] = useState(null)
+  const [polledOnlineUsers, setPolledOnlineUsers] = useState({})
   const messagesEndRef = useRef(null)
 
   const connections = useSelector((state) => state.connections.connections)
+  const activeOnlineUsers =
+    Object.keys(onlineUsers || {}).length > 0 ? onlineUsers : polledOnlineUsers
 
   const fetchUserMessages = async () => {
     try {
@@ -59,6 +62,21 @@ const ChatBox = () => {
     }
   }
 
+  const fetchOnlineUsers = async () => {
+    try {
+      const token = await getToken()
+      const { data } = await api.get('/api/message/online', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (data.success) {
+        setPolledOnlineUsers(data.onlineUsers || {})
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   useEffect(() => {
     fetchUserMessages()
     return () => {
@@ -67,16 +85,18 @@ const ChatBox = () => {
   }, [userId])
 
   useEffect(() => {
+    fetchOnlineUsers()
+    const interval = setInterval(fetchOnlineUsers, 10000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
     if (connections.length > 0) {
       const foundUser = connections.find(c => c._id === userId)
       setUser(foundUser)
     }
   }, [connections, userId])
-
-  useEffect(() => {
-    console.log("ONLINE USERS OBJECT:", onlineUsers);
-    console.log("CURRENT CHAT USER _id:", user?._id);
-  }, [onlineUsers, user]);
 
   
   useEffect(() => {
@@ -99,7 +119,7 @@ const ChatBox = () => {
 
           {/* 🟢 GREEN DOT */}
           
-          {onlineUsers?.[user._id] && (
+          {activeOnlineUsers?.[user._id] && (
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 
                             bg-green-500 rounded-full border-2 border-white">
             </span>

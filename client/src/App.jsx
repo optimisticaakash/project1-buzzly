@@ -17,6 +17,7 @@ import { fetchConnections } from './features/connections/connectionsSlice'
 import { addMessage } from './features/messages/messagesSlice'
 import { setOnlineUsers } from './features/Online/onlineSlice'
 import Notifications from './components/Notifications'
+import api from './api/axios'
 
 const App = () => {
   const { user } = useUser()
@@ -96,6 +97,30 @@ const App = () => {
     }
 
   }, [user, dispatch])
+
+  useEffect(() => {
+    if (!user) return
+
+    const syncOnlineUsers = async () => {
+      try {
+        const token = await getToken()
+        const { data } = await api.get('/api/message/online', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (data.success) {
+          dispatch(setOnlineUsers(data.onlineUsers || {}))
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
+
+    syncOnlineUsers()
+    const interval = setInterval(syncOnlineUsers, 10000)
+
+    return () => clearInterval(interval)
+  }, [user, getToken, dispatch])
 
   return (
     <>

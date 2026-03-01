@@ -5,9 +5,9 @@ import { protect } from "../middleware/auth.js";
 
 const messageRouter = express.Router();
 
+messageRouter.get('/online', protect, getOnlineUsers);
 messageRouter.get('/:userId',sseController)
 messageRouter.post('/send',upload.single('image'), protect , sendMessage)
 messageRouter.post('/get' , protect , getChatMessages)
-messageRouter.get('/online', protect, getOnlineUsers);
 
 export default messageRouter
