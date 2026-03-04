@@ -76,7 +76,7 @@ Buzzly is a modern full-stack social media web application where users can conne
 
 ### Deployment
 - Frontend → Vercel
-- Backend → Render / Railway
+- Backend → Vercel
 - Database → MongoDB Atlas
 
 ---
