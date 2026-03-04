@@ -1,5 +1,4 @@
-# <img width="1065" height="317" alt="logoo" src="https://github.com/user-attachments/assets/b58b5156-88fa-4d13-8f4b-84da35865c8e" />
-Buzzly – Full Stack Social Media Platform
+# Buzzly – Full Stack Social Media Platform
 
 ![React](https://img.shields.io/badge/Frontend-React-blue?style=for-the-badge&logo=react)
 ![Node](https://img.shields.io/badge/Backend-Node.js-green?style=for-the-badge&logo=node.js)
